@@ -1,9 +1,11 @@
 <?php
 /*
 Plugin Name: USS Tornado
-Description: A plugin to create a custom post type for Command Staff with Name, Bio, and Feature Image fields.
-Version: 1.0
-Author: Feek
+Description: A plugin to create custom post types for Command Staff and Events with custom fields.
+Version: 1.0.3
+Author: Feek21
+GitHub Plugin URI: https://github.com/feek21/USS-Tornado
+GitHub Branch: main
 */
 
 // Prevent direct access
@@ -11,7 +13,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-// Register the custom post type
+// Register the Command Staff custom post type
 function create_command_staff_cpt() {
     $labels = array(
         'name'                  => _x('Command Staff', 'Post Type General Name', 'textdomain'),
@@ -53,7 +55,6 @@ function create_command_staff_cpt() {
         'public'                => true,
         'show_ui'               => true,
         'show_in_menu'          => true,
-		'menu_icon'				=< 'groups',
         'menu_position'         => 5,
         'show_in_admin_bar'     => true,
         'show_in_nav_menus'     => true,
@@ -63,45 +64,12 @@ function create_command_staff_cpt() {
         'publicly_queryable'    => true,
         'capability_type'       => 'post',
         'show_in_rest'          => true,
+        'menu_icon'             => 'dashicons-admin-users',
     );
     
     register_post_type('staff', $args);
 }
 add_action('init', 'create_command_staff_cpt', 0);
-
-// Add the custom meta box for Bio
-function add_command_staff_metaboxes() {
-    add_meta_box(
-        'command_staff_bio',
-        'Bio',
-        'command_staff_bio_callback',
-        'staff',
-        'normal',
-        'high'
-    );
-}
-add_action('add_meta_boxes', 'add_command_staff_metaboxes');
-
-function command_staff_bio_callback($post) {
-    // Retrieve current value of the meta key
-    $bio = get_post_meta($post->ID, '_command_staff_bio', true);
-    ?>
-    <textarea style="width:100%; height: 150px;" id="command_staff_bio" name="command_staff_bio"><?php echo esc_textarea($bio); ?></textarea>
-    <?php
-}
-
-// Save the Bio Meta Box data
-function save_command_staff_meta($post_id) {
-    // Save the bio field
-    if (isset($_POST['command_staff_bio'])) {
-        update_post_meta($post_id, '_command_staff_bio', sanitize_textarea_field($_POST['command_staff_bio']));
-    }
-}
-add_action('save_post', 'save_command_staff_meta');
-
-
-
-/* EVENTS POST Type */
 
 // Register the Events custom post type
 function create_events_cpt() {
@@ -144,7 +112,6 @@ function create_events_cpt() {
         'hierarchical'          => false,
         'public'                => true,
         'show_ui'               => true,
-		'menu_icon'				=< 'caldendar-alt',
         'show_in_menu'          => true,
         'menu_position'         => 6,
         'show_in_admin_bar'     => true,
@@ -155,13 +122,105 @@ function create_events_cpt() {
         'publicly_queryable'    => true,
         'capability_type'       => 'post',
         'show_in_rest'          => true,
+        'menu_icon'             => 'dashicons-calendar-alt',
     );
     
     register_post_type('events', $args);
 }
 add_action('init', 'create_events_cpt', 0);
 
+// Add Meta Boxes for Command Staff and Events
+function add_custom_metaboxes() {
+    // Command Staff meta boxes
+    add_meta_box(
+        'command_staff_bio',
+        'Bio',
+        'command_staff_bio_callback',
+        'staff',
+        'normal',
+        'high'
+    );
+    
+    // Events meta boxes
+    add_meta_box(
+        'event_date',
+        'Event Date',
+        'event_date_callback',
+        'events',
+        'side',
+        'high'
+    );
+    add_meta_box(
+        'event_time_length',
+        'Event Time Length (in hours)',
+        'event_time_length_callback',
+        'events',
+        'side',
+        'high'
+    );
+    add_meta_box(
+        'event_location',
+        'Event Location',
+        'event_location_callback',
+        'events',
+        'normal',
+        'high'
+    );
+    add_meta_box(
+        'event_url',
+        'Event URL',
+        'event_url_callback',
+        'events',
+        'normal',
+        'high'
+    );
+}
+add_action('add_meta_boxes', 'add_custom_metaboxes');
 
+function command_staff_bio_callback($post) {
+    $bio = get_post_meta($post->ID, '_command_staff_bio', true);
+    echo '<textarea name="command_staff_bio" rows="5" cols="50">' . esc_attr($bio) . '</textarea>';
+}
+
+function event_date_callback($post) {
+    $date = get_post_meta($post->ID, '_event_date', true);
+    echo '<input type="date" name="event_date" value="' . esc_attr($date) . '" />';
+}
+
+function event_time_length_callback($post) {
+    $time_length = get_post_meta($post->ID, '_event_time_length', true);
+    echo '<input type="number" name="event_time_length" value="' . esc_attr($time_length) . '" step="0.1" min="0" />';
+}
+
+function event_location_callback($post) {
+    $location = get_post_meta($post->ID, '_event_location', true);
+    echo '<input type="text" name="event_location" value="' . esc_attr($location) . '" size="25" />';
+}
+
+function event_url_callback($post) {
+    $url = get_post_meta($post->ID, '_event_url', true);
+    echo '<input type="url" name="event_url" value="' . esc_attr($url) . '" size="50" />';
+}
+
+// Save Meta Box Data
+function save_custom_metaboxes_data($post_id) {
+    if (array_key_exists('command_staff_bio', $_POST)) {
+        update_post_meta($post_id, '_command_staff_bio', sanitize_text_field($_POST['command_staff_bio']));
+    }
+    if (array_key_exists('event_date', $_POST)) {
+        update_post_meta($post_id, '_event_date', sanitize_text_field($_POST['event_date']));
+    }
+    if (array_key_exists('event_time_length', $_POST)) {
+        update_post_meta($post_id, '_event_time_length', sanitize_text_field($_POST['event_time_length']));
+    }
+    if (array_key_exists('event_location', $_POST)) {
+        update_post_meta($post_id, '_event_location', sanitize_text_field($_POST['event_location']));
+    }
+    if (array_key_exists('event_url', $_POST)) {
+        update_post_meta($post_id, '_event_url', esc_url_raw($_POST['event_url']));
+    }
+}
+add_action('save_post', 'save_custom_metaboxes_data');
 
 // Customize Admin Menu Icons and Colors
 function custom_post_type_icons() {
@@ -170,7 +229,7 @@ function custom_post_type_icons() {
         /* Command Staff Icon */
         #menu-posts-staff .dashicons-admin-post:before {
             content: '\f110'; /* Dashicons admin-users icon */
-            color: green;
+            color: red;
         }
 
         /* Events Icon */
